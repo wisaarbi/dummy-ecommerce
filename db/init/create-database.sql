@@ -1,0 +1,2 @@
+CREATE DATABASE member;
+CREATE DATABASE product;

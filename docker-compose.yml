@@ -1,0 +1,129 @@
+version: "3.8"
+
+services:
+  # =========================
+  # POSTGRES (UNTUK MEMBER & PRODUCT)
+  # =========================
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DEFAULT_DB}
+    ports:
+      - "5432:5432"
+    networks:
+      - backend
+    volumes:
+      - ./db/init:/docker-entrypoint-initdb.d
+
+
+  # =========================
+  # MONGO (UNTUK CART)
+  # =========================
+  mongo:
+    image: mongo:7
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    ports:
+      - "27017:27017" # opsional, untuk akses dari host
+    networks:
+      - backend
+
+  # =========================
+  # REDIS (UNTUK GATEWAY)
+  # =========================
+  redis:
+    image: redis:7-alpine
+    networks:
+      - backend
+
+  # =========================
+  # MEMBER SERVICE (POSTGRES)
+  # =========================
+  member:
+    build:
+      context: ./member
+      dockerfile: Dockerfile
+    image: training-member:local
+    depends_on:
+      - postgres
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${MEMBER_DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+    networks:
+      - backend
+    # internal only
+
+  # =========================
+  # PRODUCT SERVICE (POSTGRES)
+  # =========================
+  product:
+    build:
+      context: ./product
+      dockerfile: Dockerfile
+    image: training-product:local
+    depends_on:
+      - postgres
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${PRODUCT_DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+    networks:
+      - backend
+    # internal only
+
+  # =========================
+  # CART SERVICE (MONGO)
+  # =========================
+  cart:
+    build:
+      context: ./cart
+      dockerfile: Dockerfile
+    image: training-cart:local
+    depends_on:
+      - mongo
+      - product
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATA_MONGODB_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongo:27017/${CART_MONGO_DB_NAME}?authSource=admin
+      SERVICES_CLIENTS_PRODUCT_BASE_URL: http://product:8082
+    networks:
+      - backend
+    # internal only
+
+  # =========================
+  # API GATEWAY
+  # =========================
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    image: training-api-gateway:local
+    depends_on:
+      - member
+      - product
+      - cart
+      - redis
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      MEMBER_SERVICE_BASE_URL: http://member:8081
+      PRODUCT_SERVICE_BASE_URL: http://product:8082
+      CART_SERVICE_BASE_URL: http://cart:8083
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SECURITY_JWT_SECRET_KEY: ${SECURITY_JWT_SECRET_KEY}
+    networks:
+      - backend
+    ports:
+      - "8080:8080"
+
+networks:
+  backend:
+    driver: bridge
