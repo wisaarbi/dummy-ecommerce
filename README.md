@@ -1,4 +1,4 @@
-# Training Project 2025-11 - Microservices E-Commerce Platform
+# Dummy Ecommerce - Microservices E-Commerce Platform
 
 ## Overview
 A microservices-based marketplace platform built with Spring Boot 3.5.8 and Java 21. Implements JWT-based authentication, product catalog with Redis caching, shopping cart with MongoDB, and Redis-based rate limiting.
@@ -317,7 +317,7 @@ HTTP Status: `429 Too Many Requests`
 ## Project Structure
 
 ```
-training-project-2025-11/
+dummy-ecommerce/
 ├── api-gateway/                    # API Gateway with JWT filter & rate limiter
 │   ├── Dockerfile
 │   ├── pom.xml

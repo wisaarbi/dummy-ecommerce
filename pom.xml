@@ -1,7 +1,7 @@
 <project>
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.gdn.training</groupId>
-    <artifactId>training-project-2025-11</artifactId>
+    <artifactId>dummy-ecommerce</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
